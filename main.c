@@ -23,7 +23,6 @@ typedef struct Genome {
 typedef struct Genomes {
 	Genome *items;
 	size_t count;
-	size_t capacity;
 } Genomes;
 
 int *generate_random_permutation_of_unique_indices() {
@@ -90,6 +89,12 @@ Genome generate_random_genome() {
 	return g;
 }
 
+void initialize_population(Genomes *population, size_t size) {
+	for (size_t i = 0; i < size; ++i) {
+		population->items[i] = generate_random_genome();
+	}
+	population->count = size;
+}
 void print_genome(Genome *g) {
 	printf("lenght: %d\n", g->lenght);
 	printf("fitness: %f\n", g->fitness);
