@@ -52,7 +52,7 @@ int *generate_random_permutation_of_unique_indices() {
 }
 
 float random_float() {
-	return (float) rand() / (float) RAND_MAX * 2.0f * 10.0f;
+	return (float) rand() / (float) RAND_MAX * 1.0f * 10.0f;
 }
 
 City generate_random_city() {
@@ -67,7 +67,6 @@ float euclidean_distance(City a, City b) {
 Genome generate_random_genome() {
 	City *cities = (City *)malloc(sizeof(City) * LENGTH);
 	assert(cities != NULL && "Memory Allocation for Cities Failed.");
-
 	memset(cities, 0 , sizeof(*cities));
 
 	int *indices = generate_random_permutation_of_unique_indices();
@@ -88,18 +87,19 @@ Genome generate_random_genome() {
 	};
 
 	free(indices);
-
 	return g;
 }
 
 void print_genome(Genome *g) {
 	printf("lenght: %d\n", g->lenght);
 	printf("fitness: %f\n", g->fitness);
-	printf("Cities:   x   ,   y\n");
+	printf("+-------------------------+\n");
+	printf("|Cities:    x   |     y   |\n");
+	printf("+-------------------------+\n");
 	for (int i = 0; i < g->lenght; ++i) {
-		printf("City_%d:  %.2f  ,  %.2f  \n", i+1 , g->cities[i].x , g->cities[i].y);
+		printf("|City_%d:  %.2f  |   %.2f  |\n", i+1 , g->cities[i].x , g->cities[i].y);
+		printf("+-------------------------+\n");
 	}
-	printf("\n");
 }
 
 void free_genome(Genome *g) {
