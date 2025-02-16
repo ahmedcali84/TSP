@@ -72,7 +72,7 @@ Permutation *generate_permuations_of_indices(unsigned int *indices, unsigned int
     memcpy(copy, indices, sizeof(unsigned int) * length);
 
 	unsigned int index = 0;
-	generate_permuations(copy, size, permuation->array, &index, length);
+	generate_permuations(copy, length, permuation->array, &index, length);
 	permuation->count = size;
 
 	free(copy);
@@ -137,7 +137,7 @@ Genome generate_random_genome(unsigned int length) {
 	assert(cities != NULL && "Memory Allocation for Cities Failed.");
 
 	unsigned int *indices = select_random_permutation_of_unique_indices(length);
-	print_indices(indices, length);
+	// print_indices(indices, length);
 	for (unsigned int i = 0; i < length; ++i) {
 		cities[indices[i] - 1] = generate_random_city();
 	}
@@ -176,16 +176,22 @@ Genome deep_copy_genome(const Genome *source) {
 
 Genomes *select_parents(const Genomes *gs) {
 	/* 
-		We are selecting Genomes from the Population of the Genomes
-		to be parents so the Genomes with the highest fitness are chosen
+		We are selecting Genomes from the Population to be parents 
+		so the Genomes with the highest fitness are chosen
 	*/
 
-	unsigned int max = 0;
-	unsigned int max_2 = 0;
-	for (unsigned int i = 1; i < gs->count; ++i) {
+	unsigned int max = 0 , max_2 = 1;
+
+	if (gs->items[max_2].fitness > gs->items[max].fitness) {
+		swap(&max, &max_2);
+	}
+
+	for (unsigned int i = 2; i < gs->count; ++i) {
 		if (gs->items[i].fitness > gs->items[max].fitness) {
 			max_2 = max;
 			max = i;
+		} else if (gs->items[i].fitness > gs->items[max_2].fitness) {
+			max_2 = i;
 		}
 	}
 
