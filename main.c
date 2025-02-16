@@ -30,10 +30,12 @@ typedef struct Permutation {
 	unsigned int count;
 } Permutation;
 
-void swap(unsigned int *a, unsigned int *b) {
-	unsigned int temp = *a;
-	*a = *b;
-	*b = temp;
+void swap(void *a, void *b, size_t size) {
+    char *temp = malloc(size); // Allocate temporary storage
+    memcpy(temp, a, size); // temp = a
+    memcpy(a, b, size);    // a = b
+    memcpy(b, temp, size); // b = temp
+	free(temp); // free temp
 }
 
 unsigned int factorial(unsigned int n) {
@@ -52,9 +54,9 @@ void generate_permuations(unsigned int *a, unsigned int size, unsigned int **res
 		for (unsigned int i = 0; i < size; ++i) {
 			generate_permuations(a, size - 1, result, index, length);
 			if (size % 2 == 0) {
-				swap(&a[i], &a[size -  1]);
+				swap(&a[i], &a[size -  1], sizeof(unsigned int));
 			} else {
-				swap(&a[0], &a[size - 1]);
+				swap(&a[0], &a[size - 1], sizeof(unsigned int));
 			}
 		}
 	}
@@ -183,7 +185,7 @@ Genomes *select_parents(const Genomes *gs) {
 	unsigned int max = 0 , max_2 = 1;
 
 	if (gs->items[max_2].fitness > gs->items[max].fitness) {
-		swap(&max, &max_2);
+		swap(&max, &max_2, sizeof(unsigned int));
 	}
 
 	for (unsigned int i = 2; i < gs->count; ++i) {
@@ -208,7 +210,7 @@ Genomes *select_parents(const Genomes *gs) {
 	return parents;
 }
 
-// Genome crossover_child(const Genome *parent1, const Genome *parent2) {
+// Genome crossover(const Genome *parent1, const Genome *parent2) {
 
 // }
 
@@ -250,7 +252,7 @@ void free_population(Genomes *gs) {
 int main(void) {
 	srand(time(NULL));
 
-	unsigned int size = 10;
+	unsigned int size = 100;
 	Genomes *gs = (Genomes *)malloc(sizeof(Genomes));
 	assert(gs != NULL && "Memory Allocation for Population Failed");
 
@@ -258,7 +260,7 @@ int main(void) {
 	assert(gs != NULL && "Memory Allocation for Genime Array Failed");
 
 	initialize_population(gs, size, LENGTH);
-	print_population(gs);
+	// print_population(gs);
 
 	Genomes *g = select_parents(gs);
 	print_population(g);
