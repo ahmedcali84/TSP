@@ -1,4 +1,5 @@
+OUTPUT=run
 build:
-	gcc -Wall -Werror -Wextra -ggdb -o build main.c -lm
+	gcc -o3 -Wall -Werror -Wextra -std=c17 -ggdb -pedantic-errors -o $(OUTPUT) main.c -lm
 clean:
-	rm -rf build
+	$(RM) -r *.dSYM *.o $(OUTPUT)
