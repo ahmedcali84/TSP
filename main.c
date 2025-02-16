@@ -15,9 +15,9 @@ typedef struct City{
 } City;
 
 typedef struct Genome {
-    City *cities;
-    unsigned int lenght;
-    float fitness;
+    unsigned int *path; // tracking city order array
+    unsigned int length; // num cities
+    float fitness; 
 } Genome;
 
 typedef struct Genomes {
@@ -29,6 +29,9 @@ typedef struct Permutation {
     unsigned int **array;
     unsigned int count;
 } Permutation;
+
+// Global Variables
+City cities[LENGTH]; // city array
 
 void swap(void *a, void *b, size_t size) {
     char *temp = malloc(size); // Allocate temporary storage
@@ -130,32 +133,35 @@ City generate_random_city() {
 }
 
 float euclidean_distance(City a, City b) {
-    float d = sqrtf(((b.x - a.x) * (b.x - a.x)) + ((b.y - a.y) * (b.y - a.y)));
-    return d;
+    return sqrtf(((b.x - a.x) * (b.x - a.x)) + ((b.y - a.y) * (b.y - a.y)));
+}
+
+void initialize_cities() {
+    for (unsigned int i = 0; i < LENGTH; ++i) {
+        cities[i] = generate_random_city();
+    }
+}
+
+float calculate_fitness(Genome *g) {
+    float total_distance = 0.0f;
+    for (unsigned int i = 0; i < g->length - 1; ++i) {
+        City city_1 = cities[g->path[i]];
+        City city_2 = cities[g->path[i + 1]];
+        total_distance += euclidean_distance(city_1, city_2);
+    }
+
+    return 1.0f / total_distance;
 }
 
 Genome generate_random_genome(unsigned int length) {
-    City *cities = (City *)malloc(sizeof(City) * length);
-    assert(cities != NULL && "Memory Allocation for Cities Failed.");
-
-    unsigned int *indices = select_random_permutation_of_unique_indices(length);
-    // print_indices(indices, length);
-    for (unsigned int i = 0; i < length; ++i) {
-        cities[indices[i] - 1] = generate_random_city();
-    }
-
-    float sum = 0;
-    for (unsigned int i = 0; i < length - 1; ++i) {
-        sum += euclidean_distance(cities[i], cities[i + 1]);
-    }
+    unsigned int *path = select_random_permutation_of_unique_indices(length);
 
     Genome g = {
-        .fitness = 1.0f / sum,
-        .lenght = length,
-        .cities = cities,
+        .length = length,
+        .path = path,
+        .fitness = calculate_fitness(&g),
     };
 
-    free(indices);
     return g;
 }
 
@@ -168,11 +174,11 @@ void initialize_population(Genomes *population, unsigned int size, unsigned int 
 
 Genome deep_copy_genome(const Genome *source) {
     Genome destination;
-    destination.lenght = source->lenght;
+    destination.length = source->length;
     destination.fitness = source->fitness;
-    destination.cities = (City *)malloc(sizeof(City)*destination.lenght);
-    assert(destination.cities != NULL && "Memory Allocation For Destination Cities Failed");
-    memcpy(destination.cities, source->cities, sizeof(City)*destination.lenght);
+    destination.path = (unsigned int *)malloc(sizeof(unsigned int)*destination.length);
+    assert(destination.path != NULL && "Memory Allocation For Destination Cities Failed");
+    memcpy(destination.path, source->path, sizeof(unsigned int)*destination.length);
     return destination;
 }
 
@@ -215,13 +221,13 @@ Genomes *select_parents(const Genomes *gs) {
 // }
 
 void print_genome(const Genome *g) {
-    printf("lenght: %d\n", g->lenght);
+    printf("lenght: %d\n", g->length);
     printf("fitness: %f\n", g->fitness);
     printf("+-------------------------+\n");
     printf("|Cities:    x   |     y   |\n");
     printf("+-------------------------+\n");
-    for (unsigned int i = 0; i < g->lenght; ++i) {
-        printf("|City_%d:  %.2f  |   %.2f  |\n", i+1 , g->cities[i].x , g->cities[i].y);
+    for (unsigned int i = 0; i < g->length; ++i) {
+        printf("|City_%d:  %.2f  |   %.2f  |\n", i+1 , cities[g->path[i]].x , cities[g->path[i]].y);
         printf("+-------------------------+\n");
     }
 }
@@ -233,9 +239,9 @@ void print_population(const Genomes *gs) {
 }
 
 void free_genome(Genome *g) {
-    if (g->cities != NULL) {
-        free(g->cities);
-        g->cities = NULL;
+    if (g->path != NULL) {
+        free(g->path);
+        g->path = NULL;
     }
 }
 
@@ -251,6 +257,8 @@ void free_population(Genomes *gs) {
 
 int main(void) {
     srand(time(NULL));
+
+    initialize_cities();
 
     unsigned int size = 100;
     Genomes *gs = (Genomes *)malloc(sizeof(Genomes));
