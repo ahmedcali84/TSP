@@ -7,7 +7,7 @@
 #include <string.h>
 #include <math.h>
 
-#define LENGTH 4
+#define LENGTH 3
 
 typedef struct City{
     float x;
@@ -84,6 +84,17 @@ Permutation *generate_permuations_of_indices(unsigned int *indices, unsigned int
     return permuation;
 }
 
+void print_permutations(Permutation *permutations) {
+    for (unsigned int i = 0; i < permutations->count; ++i) {
+        for (unsigned int j = 0; j < LENGTH; ++j) {
+            printf(" %d ", permutations->array[i][j]);
+        }
+        printf("\n");
+    }
+
+    printf("Count: %d\n", permutations->count);
+}
+
 void free_permutations(Permutation *permutations) {
     if (permutations != NULL) {
         for (unsigned int i = 0; i < permutations->count; ++i) {
@@ -114,6 +125,7 @@ unsigned int *select_random_permutation_of_unique_indices(unsigned int length) {
     unsigned int *indices = deep_copy_array(permuations->array[index], length);
 
     free(temp);
+    print_permutations(permuations);
     free_permutations(permuations);
     return indices;
 }
@@ -157,8 +169,8 @@ Genome generate_random_genome(unsigned int length) {
     unsigned int *path = select_random_permutation_of_unique_indices(length);
 
     Genome g = {
-        .length = length,
         .path = path,
+        .length = length,
         .fitness = calculate_fitness(&g),
     };
 
