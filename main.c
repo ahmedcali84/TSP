@@ -6,10 +6,11 @@
 #include <time.h>
 #include <string.h>
 #include <math.h>
+#include <stdbool.h>
 
-#define LENGTH 3
+#define LENGTH 5
 
-typedef struct City{
+typedef struct City {
     float x;
     float y;
 } City;
@@ -125,7 +126,7 @@ unsigned int *select_random_permutation_of_unique_indices(unsigned int length) {
     unsigned int *indices = deep_copy_array(permuations->array[index], length);
 
     free(temp);
-    print_permutations(permuations);
+    // print_permutations(permuations);
     free_permutations(permuations);
     return indices;
 }
@@ -148,8 +149,8 @@ float euclidean_distance(City a, City b) {
     return sqrtf(((b.x - a.x) * (b.x - a.x)) + ((b.y - a.y) * (b.y - a.y)));
 }
 
-void initialize_cities() {
-    for (unsigned int i = 0; i < LENGTH; ++i) {
+void initialize_cities(unsigned int length) {
+    for (unsigned int i = 0; i < length; ++i) {
         cities[i] = generate_random_city();
     }
 }
@@ -228,27 +229,65 @@ Genomes *select_parents(const Genomes *gs) {
     return parents;
 }
 
-// Genome crossover(const Genome *parent1, const Genome *parent2) {
+Genome crossover(const Genome *parent1, const Genome *parent2) {
+    Genome child;
+    child.length = parent1->length;
+    child.path = (unsigned int *)malloc(sizeof(unsigned int) * parent1->length);
+    assert(child.path != NULL && "Memory Allocation For Child Path Array Failed");
 
-// }
+    // Randomly select a cross over range
+    unsigned int start = rand() % (child.length / 2);
+    unsigned int end   = start  + (child.length / 2);
 
-void print_genome(const Genome *g) {
-    printf("lenght: %d\n", g->length);
-    printf("fitness: %f\n", g->fitness);
-    printf("+-------------------------+\n");
-    printf("|Cities:    x   |     y   |\n");
-    printf("+-------------------------+\n");
+    // Copy Segment of cities from parent 1
+    for (unsigned int i = start; i <= end; ++i) {
+        child.path[i] = parent1->path[i];
+    }
+
+    // Fill the Remaining With Parent 2 cities
+    unsigned int cross_pos = 0;
+    for (unsigned int i = 0; i < child.length; ++i) {
+        if (cross_pos == start) { // this starting segment was filled
+            cross_pos = end + 1;
+        }
+
+        // check duplicates
+        bool exists = false;
+        for (unsigned int j = start; j <= end; ++j) {
+            if (parent2->path[i] == child.path[j]) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists) {
+            child.path[cross_pos++] = parent2->path[i];
+        }
+    }
+
+    child.fitness = calculate_fitness(&child);
+    return child;
+}
+
+void print_genome(FILE *stream, const Genome *g) {
+    fprintf(stream , "lenght: %d\n", g->length);
+    fprintf(stream, "fitness: %f\n", g->fitness);
+    fprintf(stream, "+-------------------------+\n");
+    fprintf(stream, "|Cities:    x   |     y   |\n");
+    fprintf(stream, "+-------------------------+\n");
     for (unsigned int i = 0; i < g->length; ++i) {
-        printf("|City_%d:  %.2f  |   %.2f  |\n", i+1 , cities[g->path[i]].x , cities[g->path[i]].y);
-        printf("+-------------------------+\n");
+        fprintf(stream, "|City_%d:  %.2f  |   %.2f  |\n", i+1 , cities[g->path[i]].x , cities[g->path[i]].y);
+        fprintf(stream, "+-------------------------+\n");
     }
 }
 
-void print_population(const Genomes *gs) {
+void print_population(FILE *stream, const Genomes *gs, const char *title) {
+    fprintf(stream, " %s :\n", title);
     for (unsigned int i = 0; i < gs->count; ++i) {
-        print_genome(&gs->items[i]);
+        print_genome(stream, &gs->items[i]);
     }
 }
+
+#define PRINT_POPULATION(__FILE__, B) print_population(__FILE__, B, #B)
 
 void free_genome(Genome *g) {
     if (g->path != NULL) {
@@ -270,22 +309,39 @@ void free_population(Genomes *gs) {
 int main(void) {
     srand(time(NULL));
 
-    initialize_cities();
+    // Dumping Output File
+    const char *output_stream = "output.txt";
+    FILE *fw = fopen(output_stream, "w");
 
-    unsigned int size = 100;
-    Genomes *gs = (Genomes *)malloc(sizeof(Genomes));
-    assert(gs != NULL && "Memory Allocation for Population Failed");
+    // Initialize Cities
+    initialize_cities(LENGTH);
 
-    gs->items = (Genome *)malloc(sizeof(Genome) * size);
-    assert(gs != NULL && "Memory Allocation for Genime Array Failed");
+    // Allocate Memory For Population
+    unsigned int size = 3; // Population Size
+    Genomes *Population = (Genomes *)malloc(sizeof(Genomes));
+    assert(Population != NULL && "Memory Allocation for Population Failed");
 
-    initialize_population(gs, size, LENGTH);
-    // print_population(gs);
+    Population->items = (Genome *)malloc(sizeof(Genome) * size);
+    assert(Population != NULL && "Memory Allocation for Genime Array Failed");
 
-    Genomes *g = select_parents(gs);
-    print_population(g);
+    // Initialize Population
+    initialize_population(Population, size, LENGTH);
+    PRINT_POPULATION(fw , Population); // print population
 
-    free_population(g);
-    free_population(gs);
+    // Select Parents
+    Genomes *Parents = select_parents(Population);
+    PRINT_POPULATION(fw , Parents); // print parents
+
+    // Child CrossOver
+    Genome child = crossover(&Parents->items[0], &Parents->items[1]);
+    fprintf(fw, "Child\n");
+    print_genome(fw , &child);
+
+    fclose(fw); // Close file
+
+    // Free Memory
+    free_genome(&child);
+    free_population(Parents);
+    free_population(Population);
     return 0;
 }
