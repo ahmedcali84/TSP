@@ -8,7 +8,7 @@
 #include <math.h>
 #include <stdbool.h>
 
-#define LENGTH 5
+#define LENGTH 10
 
 typedef struct City {
     float x;
@@ -121,7 +121,7 @@ unsigned int *select_random_permutation_of_unique_indices(unsigned int length) {
     for (unsigned int i = 0; i < length; ++i) {
         temp[i] = i;
     }
-    
+
     Permutation *permuations = generate_permuations_of_indices(temp, length);
     unsigned int index = (unsigned int) rand() % permuations->count;
     unsigned int *indices = deep_copy_array(permuations->array[index], length);
@@ -237,12 +237,15 @@ Genome crossover(const Genome *parent1, const Genome *parent2) {
     assert(child.path != NULL && "Memory Allocation For Child Path Array Failed");
 
     // Randomly select a cross over range
-    unsigned int start = rand() % (child.length / 2);
-    unsigned int end   = start  + (child.length / 2);
+    unsigned int start = rand() % (child.length);
+    unsigned int end   = rand() % (child.length);
+    if (start > end) swap(&start , &end , sizeof(unsigned int));
 
     // Copy Segment of cities from parent 1
+    bool *in_segment = calloc(child.length , sizeof(bool));
     for (unsigned int i = start; i <= end; ++i) {
         child.path[i] = parent1->path[i];
+        in_segment[parent1->path[i]] = true;
     }
 
     // Fill the Remaining With Parent 2 cities
@@ -251,22 +254,23 @@ Genome crossover(const Genome *parent1, const Genome *parent2) {
         if (cross_pos == start) { // this starting segment was filled
             cross_pos = end + 1;
         }
-
-        // check duplicates
-        bool exists = false;
-        for (unsigned int j = start; j <= end; ++j) {
-            if (parent2->path[i] == child.path[j]) {
-                exists = true;
-                break;
-            }
-        }
-        if (!exists) {
+        if (!in_segment[parent2->path[i]]) {
             child.path[cross_pos++] = parent2->path[i];
         }
     }
 
+    free(in_segment);
     child.fitness = calculate_fitness(&child);
     return child;
+}
+
+void mutute_genome(Genome *g, float mutation_rate) {
+    if (((float) rand() / (float) RAND_MAX) < mutation_rate) {
+        unsigned int i = rand() % g->length;
+        unsigned int j = rand() % g->length;
+        swap(&g->path[i] , &g->path[j] , sizeof(unsigned int));
+        g->fitness = calculate_fitness(g);
+    }
 }
 
 void print_genome(FILE *stream, const Genome *g, const char *title) {
@@ -337,6 +341,7 @@ int main(void) {
 
     // Child CrossOver
     Genome child = crossover(&Parents->items[0], &Parents->items[1]);
+    mutute_genome(&child , 0.12);
     print_genome(fw , &child, "child");
 
     printf("Successfully dumped output to %s\n", output_stream);
