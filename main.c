@@ -119,8 +119,9 @@ unsigned int *select_random_permutation_of_unique_indices(unsigned int length) {
     assert(temp != NULL && "Memory Allocation For Temporary Indices Array Failed");
 
     for (unsigned int i = 0; i < length; ++i) {
-        temp[i] = i + 1;
+        temp[i] = i;
     }
+    
     Permutation *permuations = generate_permuations_of_indices(temp, length);
     unsigned int index = (unsigned int) rand() % permuations->count;
     unsigned int *indices = deep_copy_array(permuations->array[index], length);
