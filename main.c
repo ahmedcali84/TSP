@@ -268,8 +268,9 @@ Genome crossover(const Genome *parent1, const Genome *parent2) {
     return child;
 }
 
-void print_genome(FILE *stream, const Genome *g) {
-    fprintf(stream , "lenght: %d\n", g->length);
+void print_genome(FILE *stream, const Genome *g, const char *title) {
+    fprintf(stream, "%s: \n", title);
+    fprintf(stream, "lenght: %d\n", g->length);
     fprintf(stream, "fitness: %f\n", g->fitness);
     fprintf(stream, "+-------------------------+\n");
     fprintf(stream, "|Cities:    x   |     y   |\n");
@@ -278,12 +279,13 @@ void print_genome(FILE *stream, const Genome *g) {
         fprintf(stream, "|City_%d:  %.2f  |   %.2f  |\n", i+1 , cities[g->path[i]].x , cities[g->path[i]].y);
         fprintf(stream, "+-------------------------+\n");
     }
+    fprintf(stream, "----------------------------\n");
 }
 
 void print_population(FILE *stream, const Genomes *gs, const char *title) {
     fprintf(stream, " %s :\n", title);
     for (unsigned int i = 0; i < gs->count; ++i) {
-        print_genome(stream, &gs->items[i]);
+        print_genome(stream, &gs->items[i], "member");
     }
 }
 
@@ -317,7 +319,7 @@ int main(void) {
     initialize_cities(LENGTH);
 
     // Allocate Memory For Population
-    unsigned int size = 3; // Population Size
+    unsigned int size = 5; // Population Size
     Genomes *Population = (Genomes *)malloc(sizeof(Genomes));
     assert(Population != NULL && "Memory Allocation for Population Failed");
 
@@ -334,9 +336,9 @@ int main(void) {
 
     // Child CrossOver
     Genome child = crossover(&Parents->items[0], &Parents->items[1]);
-    fprintf(fw, "Child\n");
-    print_genome(fw , &child);
+    print_genome(fw , &child, "child");
 
+    printf("Successfully dumped output to %s\n", output_stream);
     fclose(fw); // Close file
 
     // Free Memory
