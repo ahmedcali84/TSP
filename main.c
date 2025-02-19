@@ -294,7 +294,7 @@ void print_population(FILE *stream, const Genomes *gs, const char *title) {
     }
 }
 
-#define PRINT_POPULATION(__FILE__, B) print_population(__FILE__, B, #B)
+#define PRINT_POPULATION(stream, population) print_population(stream, population, #population)
 
 void free_genome(Genome *g) {
     if (g->path != NULL) {
