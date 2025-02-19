@@ -1,2 +1,9 @@
-build
+# Compiled files
+run
+
+# .vscode folder
 .vscode/
+
+# .txt and .bin files
+*.bin
+*.txt
