@@ -8,7 +8,21 @@
 #include <math.h>
 #include <stdbool.h>
 
-#define LENGTH 10
+#define LENGTH 4 // Number of Cities
+#define SIZE   10 // Population Size
+#define MUTATION_RATE 1.0f // Mutation Rate
+#define MAX_GENERATIONS 5 // Maximum Generations
+
+#define INITIAL_CAPACITY SIZE // INITIAL CAPACITY FOR THE POPULATION
+
+typedef enum {
+    INITIALIZE,
+    SELECT_PARENTS,
+    CROSSOVER,
+    MUTATION,
+    REPLACE,
+    TERMINATE,
+} State;
 
 typedef struct City {
     float x;
@@ -21,9 +35,11 @@ typedef struct Genome {
     float fitness; 
 } Genome;
 
+
 typedef struct Genomes {
     Genome *items;
     unsigned int count;
+    unsigned int capacity;
 } Genomes;
 
 typedef struct Permutation {
@@ -49,14 +65,14 @@ unsigned int factorial(unsigned int n) {
     return n * factorial(n - 1);
 }
 
-void generate_permuations(unsigned int *a, unsigned int size, unsigned int **result, unsigned int *index, unsigned int length) {
+void generate_permutations(unsigned int *a, unsigned int size, unsigned int **result, unsigned int *index, unsigned int length) {
     if (size == 1) {
         result[*index] = (unsigned int *)malloc(sizeof(unsigned int) * length);
         memcpy(result[*index], a , sizeof(unsigned int)*length);
         (*index)++;
     } else {
         for (unsigned int i = 0; i < size; ++i) {
-            generate_permuations(a, size - 1, result, index, length);
+            generate_permutations(a, size - 1, result, index, length);
             if (size % 2 == 0) {
                 swap(&a[i], &a[size -  1], sizeof(unsigned int));
             } else {
@@ -66,7 +82,7 @@ void generate_permuations(unsigned int *a, unsigned int size, unsigned int **res
     }
 }
 
-Permutation *generate_permuations_of_indices(unsigned int *indices, unsigned int length) {
+Permutation *generate_permutations_of_indices(unsigned int *indices, unsigned int length) {
     unsigned int size = factorial(length);
     Permutation *permuation = (Permutation *)malloc(sizeof(Permutation));
     assert(permuation != NULL && "Memory Allocation for Dynamic Permuation Struct Failed");
@@ -78,7 +94,7 @@ Permutation *generate_permuations_of_indices(unsigned int *indices, unsigned int
     memcpy(copy, indices, sizeof(unsigned int) * length);
 
     unsigned int index = 0;
-    generate_permuations(copy, length, permuation->array, &index, length);
+    generate_permutations(copy, length, permuation->array, &index, length);
     permuation->count = size;
 
     free(copy);
@@ -122,7 +138,7 @@ unsigned int *select_random_permutation_of_unique_indices(unsigned int length) {
         temp[i] = i;
     }
 
-    Permutation *permuations = generate_permuations_of_indices(temp, length);
+    Permutation *permuations = generate_permutations_of_indices(temp, length);
     unsigned int index = (unsigned int) rand() % permuations->count;
     unsigned int *indices = deep_copy_array(permuations->array[index], length);
 
@@ -184,6 +200,7 @@ void initialize_population(Genomes *population, unsigned int size, unsigned int 
         population->items[i] = generate_random_genome(length);
     }
     population->count = size;
+    population->capacity = INITIAL_CAPACITY;
 }
 
 Genome deep_copy_genome(const Genome *source) {
@@ -230,10 +247,10 @@ Genomes *select_parents(const Genomes *gs) {
     return parents;
 }
 
-Genome crossover(const Genome *parent1, const Genome *parent2) {
+Genome crossover(const Genomes *parents) {
     Genome child;
-    child.length = parent1->length;
-    child.path = (unsigned int *)malloc(sizeof(unsigned int) * parent1->length);
+    child.length = parents->items[0].length;
+    child.path = (unsigned int *)malloc(sizeof(unsigned int) * parents->items[0].length);
     assert(child.path != NULL && "Memory Allocation For Child Path Array Failed");
 
     // Randomly select a cross over range
@@ -244,18 +261,35 @@ Genome crossover(const Genome *parent1, const Genome *parent2) {
     // Copy Segment of cities from parent 1
     bool *in_segment = calloc(child.length , sizeof(bool));
     for (unsigned int i = start; i <= end; ++i) {
-        child.path[i] = parent1->path[i];
-        in_segment[parent1->path[i]] = true;
+        child.path[i] = parents->items[0].path[i];
+        in_segment[parents->items[0].path[i]] = true;
     }
 
     // Fill the Remaining With Parent 2 cities
-    unsigned int cross_pos = 0;
-    for (unsigned int i = 0; i < child.length; ++i) {
-        if (cross_pos == start) { // this starting segment was filled
-            cross_pos = end + 1;
+    // Fill positions before start
+    unsigned int parent_index = 0;
+    for (unsigned int i = 0; i < start; ++i) {
+        while (parent_index < parents->items[1].length) {
+            unsigned int city = parents->items[1].path[parent_index];
+            if (!in_segment[city]) {
+                child.path[i] = city;
+                parent_index++;
+                break;
+            }
+            parent_index++;
         }
-        if (!in_segment[parent2->path[i]]) {
-            child.path[cross_pos++] = parent2->path[i];
+    }
+
+    // Fill positions after end
+    for (unsigned int i = end + 1; i < child.length; ++i) {
+        while (parent_index < parents->items[1].length) {
+            unsigned int city = parents->items[1].path[parent_index];
+            if (!in_segment[city]) {
+                child.path[i] = city;
+                parent_index++;
+                break;
+            }
+            parent_index++;
         }
     }
 
@@ -264,13 +298,74 @@ Genome crossover(const Genome *parent1, const Genome *parent2) {
     return child;
 }
 
-void mutute_genome(Genome *g, float mutation_rate) {
+void mutate_genome(Genome *g, float mutation_rate) {
     if (((float) rand() / (float) RAND_MAX) < mutation_rate) {
         unsigned int i = rand() % g->length;
         unsigned int j = rand() % g->length;
+
+        do {
+            i = rand() % g->length;
+            j = rand() % g->length;
+        } while (i == j);
+
         swap(&g->path[i] , &g->path[j] , sizeof(unsigned int));
         g->fitness = calculate_fitness(g);
     }
+}
+
+void append_to_population(Genomes *population, Genome *member)  {
+    if (population->count == population->capacity) {
+        // Reallocate if population capped
+        population->capacity = (population->capacity == 0) ? INITIAL_CAPACITY : population->capacity * 2;
+        population->items = realloc(population->items, population->capacity * sizeof(Genome));
+        assert(population->items != NULL && "Memory Reallocation Failed");
+    }
+
+    // Allocate Memory for the new Genome
+    population->items[population->count] = deep_copy_genome(member);
+    population->count++;
+}
+
+void free_genome(Genome *g);
+
+void pop_from_population(Genomes *population, Genome *member) {
+    int index = -1;
+    for (unsigned int i = 0; i < population->count; ++i) {
+        if (&population->items[i] == member) {
+            index = i;
+            break;
+        }
+    }
+
+    if (index == -1) return; // Not Found
+    free_genome(member);
+
+    if (index != (int) population->count - 1) {
+        swap(&population->items[index], &population->items[population->count - 1], sizeof(Genome));
+    }
+
+    // Free Last element after shift
+    free_genome(&population->items[population->count - 1]);
+    population->count--;
+}
+
+Genome *find_weakest(Genomes *population) {
+    if (population->count == 0) return NULL; // Return NULL on empty population
+
+    unsigned int min = 0;
+    for (unsigned int i = 1; i < population->count; ++i) {
+        if (population->items[i].fitness < population->items[min].fitness) {
+            min = i;
+        }
+    }
+
+    return &population->items[min];
+}
+
+void replace_worst(Genomes *population, Genome *new) {
+    Genome *worst = find_weakest(population);
+    pop_from_population(population, worst);
+    append_to_population(population, new);
 }
 
 void print_genome(FILE *stream, const Genome *g, const char *title) {
@@ -317,39 +412,118 @@ int main(void) {
     srand(time(NULL));
 
     // Dumping Output File
-    const char *output_stream = "output.txt";
-    FILE *fw = fopen(output_stream, "w");
+    const char *Output_Stream = "output.txt";
+    FILE *fw = fopen(Output_Stream, "w");
 
     // Initialize Cities
     initialize_cities(LENGTH);
 
-    // Allocate Memory For Population
     unsigned int size = 5; // Population Size
-    Genomes *Population = (Genomes *)malloc(sizeof(Genomes));
-    assert(Population != NULL && "Memory Allocation for Population Failed");
 
-    Population->items = (Genome *)malloc(sizeof(Genome) * size);
-    assert(Population != NULL && "Memory Allocation for Genime Array Failed");
+    // Evolution Start
+    State state = INITIALIZE;
+    Genomes *Population = NULL;
+    Genomes *Parents = NULL;
+    Genome offspring = {0};
+    unsigned int generations = 0;
 
-    // Initialize Population
-    initialize_population(Population, size, LENGTH);
+    while (state != TERMINATE) {
+        switch (state) {
+            case INITIALIZE:
+                // Allocate Memory For Population
+                Population = (Genomes *)malloc(sizeof(Genomes));
+                assert(Population != NULL && "Memory Allocation for Population Failed");
+
+                Population->items = (Genome *)malloc(sizeof(Genome) * size);
+                assert(Population->items != NULL && "Memory Allocation for Population Genome Array Failed");
+
+                initialize_population(Population, size, LENGTH);
+                state = SELECT_PARENTS;
+                break;
+
+            case SELECT_PARENTS:
+                if (Parents) free_population(Parents);
+                Parents = select_parents(Population);
+                state = CROSSOVER;
+                break;
+
+            case CROSSOVER:
+                offspring = crossover(Parents);
+                state = MUTATION;
+                break;
+
+            case MUTATION:
+                mutate_genome(&offspring, MUTATION_RATE);
+                state = REPLACE;
+                break;
+            
+            case REPLACE:
+                replace_worst(Population, &offspring);
+                generations++;
+
+                if (generations >= MAX_GENERATIONS) {
+                    state = TERMINATE;
+                } else {
+                    state = SELECT_PARENTS;
+                }
+
+                break;
+
+            case TERMINATE:
+                break;
+        }
+    }
     PRINT_POPULATION(fw , Population); // print population
-
-    // Select Parents
-    Genomes *Parents = select_parents(Population);
-    PRINT_POPULATION(fw , Parents); // print parents
-
-    // Child CrossOver
-    Genome child = crossover(&Parents->items[0], &Parents->items[1]);
-    mutute_genome(&child , 0.12);
-    print_genome(fw , &child, "child");
-
-    printf("Successfully dumped output to %s\n", output_stream);
+    if (Parents) PRINT_POPULATION(fw , Parents); // print parents
+    print_genome(fw, &offspring , "Child");
     fclose(fw); // Close file
 
     // Free Memory
-    free_genome(&child);
-    free_population(Parents);
-    free_population(Population);
+    free_genome(&offspring);
+    if (Parents) free_population(Parents);
+    if (Population) free_population(Population);
     return 0;
 }
+
+
+// This Function Was Used For Debugging Purposes when this project was being developped
+// int main2(void) {
+//     srand(time(NULL));
+
+//     // Dumping Output File
+//     const char *output_stream = "output.txt";
+//     FILE *fw = fopen(output_stream, "w");
+
+//     // Initialize Cities
+//     initialize_cities(LENGTH);
+
+//     // Allocate Memory For Population
+//     unsigned int size = 5; // Population Size
+//     Genomes *Population = (Genomes *)malloc(sizeof(Genomes));
+//     assert(Population != NULL && "Memory Allocation for Population Failed");
+
+//     Population->items = (Genome *)malloc(sizeof(Genome) * size);
+//     assert(Population != NULL && "Memory Allocation for Genime Array Failed");
+
+//     // Initialize Population
+//     initialize_population(Population, size, LENGTH);
+//     PRINT_POPULATION(fw , Population); // print population
+
+//     // Select Parents
+//     Genomes *Parents = select_parents(Population);
+//     PRINT_POPULATION(fw , Parents); // print parents
+
+//     // Child CrossOver
+//     Genome child = crossover(&Parents->items[0], &Parents->items[1]);
+//     mutate_genome(&child , 0.90);
+//     print_genome(fw , &child, "child");
+
+//     printf("Successfully dumped output to %s\n", output_stream);
+//     fclose(fw); // Close file
+
+//     // Free Memory
+//     free_genome(&child);
+//     free_population(Parents);
+//     free_population(Population);
+//     return 0;
+// }
