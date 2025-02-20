@@ -479,6 +479,10 @@ int main(void) {
             case REPLACE:
                 replace_worst(Population, &offspring);
                 generations++;
+                
+                print_genome(fw, &offspring , "Child");
+                free_genome(&offspring);
+                offspring.path = NULL;
 
                 Genome *current_best = find_best(Population);
                 if (current_best && current_best->fitness > best_fitness) {
@@ -492,24 +496,21 @@ int main(void) {
                     generations, best_fitness, stagnation);
 
                 if (generations >= MAX_GENERATIONS || stagnation >= STAGNATION_LIMIT) {
+                    PRINT_POPULATION(fw , Population); // print population
+                    if (Parents) PRINT_POPULATION(fw , Parents); // print parents
+                    fclose(fw); // Close file
                     state = TERMINATE;
                 } else {
                     state = SELECT_PARENTS;
                 }
-
                 break;
 
             case TERMINATE:
                 break;
         }
     }
-    PRINT_POPULATION(fw , Population); // print population
-    if (Parents) PRINT_POPULATION(fw , Parents); // print parents
-    print_genome(fw, &offspring , "Child");
-    fclose(fw); // Close file
 
     // Free Memory
-    free_genome(&offspring);
     if (Parents) free_population(Parents);
     if (Population) free_population(Population);
     return 0;
