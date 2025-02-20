@@ -8,10 +8,11 @@
 #include <math.h>
 #include <stdbool.h>
 
-#define LENGTH 4 // Number of Cities
+#define LENGTH 8 // Number of Cities
 #define SIZE   10 // Population Size
 #define MUTATION_RATE 1.0f // Mutation Rate
-#define MAX_GENERATIONS 5 // Maximum Generations
+#define MAX_GENERATIONS (SIZE / 2) // Maximum Generations
+#define STAGNATION_LIMIT 3
 
 #define INITIAL_CAPACITY SIZE // INITIAL CAPACITY FOR THE POPULATION
 
@@ -22,7 +23,7 @@ typedef enum {
     MUTATION,
     REPLACE,
     TERMINATE,
-} State;
+} States;
 
 typedef struct City {
     float x;
@@ -34,7 +35,6 @@ typedef struct Genome {
     unsigned int length; // num cities
     float fitness; 
 } Genome;
-
 
 typedef struct Genomes {
     Genome *items;
@@ -362,6 +362,19 @@ Genome *find_weakest(Genomes *population) {
     return &population->items[min];
 }
 
+Genome *find_best(Genomes *population) {
+    if (population->count == 0) return NULL;
+
+    unsigned int max = 0;
+    for (unsigned int i = 1; i < population->count; ++i) {
+        if (population->items[i].fitness > population->items[max].fitness) {
+            max = i;
+        }
+    }
+
+    return &population->items[max];
+}
+
 void replace_worst(Genomes *population, Genome *new) {
     Genome *worst = find_weakest(population);
     pop_from_population(population, worst);
@@ -421,12 +434,16 @@ int main(void) {
     unsigned int size = 5; // Population Size
 
     // Evolution Start
-    State state = INITIALIZE;
+    States state = INITIALIZE;
     Genomes *Population = NULL;
     Genomes *Parents = NULL;
     Genome offspring = {0};
     unsigned int generations = 0;
 
+    float best_fitness = 0.0f;
+    unsigned int stagnation = 0.0;
+
+    // evolution loop
     while (state != TERMINATE) {
         switch (state) {
             case INITIALIZE:
@@ -449,6 +466,8 @@ int main(void) {
 
             case CROSSOVER:
                 offspring = crossover(Parents);
+                if (Parents) free_population(Parents);
+                Parents = NULL;
                 state = MUTATION;
                 break;
 
@@ -461,7 +480,18 @@ int main(void) {
                 replace_worst(Population, &offspring);
                 generations++;
 
-                if (generations >= MAX_GENERATIONS) {
+                Genome *current_best = find_best(Population);
+                if (current_best && current_best->fitness > best_fitness) {
+                    best_fitness = current_best->fitness;
+                    stagnation = 0;
+                } else {
+                    stagnation++;
+                }
+
+                printf("Generation %3d | Best Fitness: %.4f | Stagnation: %2d\n",
+                    generations, best_fitness, stagnation);
+
+                if (generations >= MAX_GENERATIONS || stagnation >= STAGNATION_LIMIT) {
                     state = TERMINATE;
                 } else {
                     state = SELECT_PARENTS;
@@ -486,7 +516,7 @@ int main(void) {
 }
 
 
-// This Function Was Used For Debugging Purposes when this project was being developped
+/* ******************* This Main Function Was Used For Debugging Purposes when this project was being developped ************ */
 // int main2(void) {
 //     srand(time(NULL));
 
