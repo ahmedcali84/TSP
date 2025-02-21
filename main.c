@@ -9,6 +9,10 @@ int main(void) {
     // Dumping Output File
     const char *Output_Stream = "output.txt";
     FILE *fw = fopen(Output_Stream, "w");
+    if (!fw) {
+        Log_Out(INFO , "Failed to Open File: %s\n", Output_Stream);
+        return 1;
+    }
 
     // Initialize Cities
     initialize_cities(LENGTH);
@@ -92,52 +96,9 @@ int main(void) {
         }
     }
     print_genome(stdout, find_best(Population), "Best Route");
-
+    
     // Free Memory
     if (Parents) free_population(Parents);
     if (Population) free_population(Population);
     return 0;
 }
-
-
-/* ******************* This Main Function Was Used For Debugging Purposes when this project was being developped ************ */
-// int main2(void) {
-//     srand(time(NULL));
-
-//     // Dumping Output File
-//     const char *output_stream = "output.txt";
-//     FILE *fw = fopen(output_stream, "w");
-
-//     // Initialize Cities
-//     initialize_cities(LENGTH);
-
-//     // Allocate Memory For Population
-//     unsigned int size = 5; // Population Size
-//     Genomes *Population = (Genomes *)malloc(sizeof(Genomes));
-//     assert(Population != NULL && "Memory Allocation for Population Failed");
-
-//     Population->items = (Genome *)malloc(sizeof(Genome) * size);
-//     assert(Population != NULL && "Memory Allocation for Genime Array Failed");
-
-//     // Initialize Population
-//     initialize_population(Population, size, LENGTH);
-//     PRINT_POPULATION(fw , Population); // print population
-
-//     // Select Parents
-//     Genomes *Parents = select_parents(Population);
-//     PRINT_POPULATION(fw , Parents); // print parents
-
-//     // Child CrossOver
-//     Genome child = crossover(&Parents->items[0], &Parents->items[1]);
-//     mutate_genome(&child , 0.90);
-//     print_genome(fw , &child, "child");
-
-//     printf("Successfully dumped output to %s\n", output_stream);
-//     fclose(fw); // Close file
-
-//     // Free Memory
-//     free_genome(&child);
-//     free_population(Parents);
-//     free_population(Population);
-//     return 0;
-// }

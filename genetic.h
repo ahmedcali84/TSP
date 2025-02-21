@@ -48,6 +48,8 @@ typedef struct Permutation {
     unsigned int count;
 } Permutation;
 
+extern City cities[LENGTH]; // city array
+
 void swap(void *a, void *b, size_t size);
 unsigned int factorial(unsigned int n);
 

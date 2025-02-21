@@ -11,7 +11,7 @@ typedef enum {
     WARNING,
 } Log_Levels;
 
-#define LOGDEF static
+#define LOGDEF static __attribute__((unused))
 
 LOGDEF const char *levels_as_cstr(Log_Levels level) {
     switch (level) {
