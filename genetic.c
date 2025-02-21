@@ -1,4 +1,5 @@
 #include "genetic.h"
+#include "alog.h"
 
 // Global Variables
 City cities[LENGTH]; // city array
@@ -57,12 +58,12 @@ Permutation *generate_permutations_of_indices(unsigned int *indices, unsigned in
 void print_permutations(Permutation *permutations) {
     for (unsigned int i = 0; i < permutations->count; ++i) {
         for (unsigned int j = 0; j < LENGTH; ++j) {
-            printf(" %d ", permutations->array[i][j]);
+            Log_Out(DEBUG, " %d ", permutations->array[i][j]);
         }
-        printf("\n");
+        Log_Out(DEBUG, "%s" ,"\n");
     }
 
-    printf("Count: %d\n", permutations->count);
+    Log_Out(DEBUG, "Count: %d\n", permutations->count);
 }
 
 void free_permutations(Permutation *permutations) {
@@ -103,7 +104,7 @@ unsigned int *select_random_permutation_of_unique_indices(unsigned int length) {
 
 void print_indices(unsigned int *array, unsigned int length) {
     for (unsigned int i = 0; i < length; ++i) {
-        printf("%d\n", array[i]);
+        Log_Out(INFO,"%d\n", array[i]);
     }
 }
 
@@ -333,21 +334,21 @@ void replace_worst(Genomes *population, Genome *new_member) {
 }
 
 void print_genome(FILE *stream, const Genome *g, const char *title) {
-    fprintf(stream, "%s: \n", title);
-    fprintf(stream, "lenght: %d\n", g->length);
-    fprintf(stream, "fitness: %f\n", g->fitness);
-    fprintf(stream, "+-------------------------+\n");
-    fprintf(stream, "|Cities:    x   |     y   |\n");
-    fprintf(stream, "+-------------------------+\n");
+    Log_File(stream, INFO, "%s: \n", title);
+    Log_File(stream, INFO, "lenght: %d\n", g->length);
+    Log_File(stream, INFO, "fitness: %f\n", g->fitness);
+    Log_File(stream, INFO, "%s", "+-------------------------+\n");
+    Log_File(stream, INFO, "%s", "|Cities:    x   |     y   |\n");
+    Log_File(stream, INFO, "%s", "+-------------------------+\n");
     for (unsigned int i = 0; i < g->length; ++i) {
-        fprintf(stream, "|City_%d:  %.2f  |   %.2f  |\n", i+1 , cities[g->path[i]].x , cities[g->path[i]].y);
-        fprintf(stream, "+-------------------------+\n");
+        Log_File(stream, INFO, "|City_%d:  %.2f  |   %.2f  |\n", i+1 , cities[g->path[i]].x , cities[g->path[i]].y);
+        Log_File(stream, INFO, "%s" , "+-------------------------+\n");
     }
-    fprintf(stream, "----------------------------\n");
+    Log_File(stream, INFO, "%s" , "----------------------------\n");
 }
 
 void print_population(FILE *stream, const Genomes *gs, const char *title) {
-    fprintf(stream, " %s :\n", title);
+    Log_File(stream, INFO, " %s :\n", title);
     for (unsigned int i = 0; i < gs->count; ++i) {
         print_genome(stream, &gs->items[i], "member");
     }
