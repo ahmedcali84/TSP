@@ -1,6 +1,7 @@
 /* TSP Project */
 
 #include "genetic.h"
+#include "alog.h"
 
 int main(void) {
     srand(time(NULL));
@@ -73,7 +74,7 @@ int main(void) {
                     stagnation++;
                 }
 
-                printf("Generation %3d | Best Fitness: %.4f | Stagnation: %2d\n",
+                Log_Out(DEBUG, "Generation %3d | Best Fitness: %.4f | Stagnation: %2d\n",
                     generations, best_fitness, stagnation);
 
                 if (generations >= MAX_GENERATIONS || stagnation >= STAGNATION_LIMIT) {
@@ -90,6 +91,7 @@ int main(void) {
                 break;
         }
     }
+    print_genome(stdout, find_best(Population), "Best Route");
 
     // Free Memory
     if (Parents) free_population(Parents);
